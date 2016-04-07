@@ -8,7 +8,7 @@
 
 
 %choose the path to the videos (you'll be able to choose one with the GUI)
-base_path = 'tracker_release/sylv/';%'./data/';%
+base_path = 'tracker_release/imgs/';%'./data/';%
 
 
 %parameters according to the paper
