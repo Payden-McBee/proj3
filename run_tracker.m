@@ -6,7 +6,9 @@
 %  João F. Henriques, 2012
 %  http://www.isr.uc.pt/~henriques/
 
-
+close all
+clear
+clc
 %choose the path to the videos (you'll be able to choose one with the GUI)
 base_path = 'tracker_release/imgs/';%'./data/';%
 
@@ -18,7 +20,11 @@ sigma = 0.2;					%gaussian kernel bandwidth
 lambda = 1e-2;					%regularization
 interp_factor = 0.075;			%linear interpolation factor for adaptation
 
-
+% parameters of occlusion GUI
+position = [1 1];
+text_str = 'Occlusion Detected!!';
+box_color = {'red'};
+occThresh = 10;
 
 %notation: variables ending with f are in the frequency domain.
 
@@ -32,6 +38,8 @@ if isempty(video_path), return, end  %user cancelled
 %window size, taking padding into account
 sz = floor(target_sz * (1 + padding));
 
+%subwindow 
+
 %desired output (gaussian shaped), bandwidth proportional to target size
 output_sigma = sqrt(prod(target_sz)) * output_sigma_factor;
 [rs, cs] = ndgrid((1:sz(1)) - floor(sz(1)/2), (1:sz(2)) - floor(sz(2)/2));
@@ -44,6 +52,9 @@ cos_window = hann(sz(1)) * hann(sz(2))';
 
 time = 0;  %to calculate FPS
 positions = zeros(numel(img_files), 2);  %to calculate precision
+
+PSR = zeros(numel(img_files),1);
+PSR(1) = 10;
 
 for frame = 1:numel(img_files),
 	%load image
@@ -68,6 +79,19 @@ for frame = 1:numel(img_files),
 		%target location is at the maximum response
 		[row, col] = find(response == max(response(:)), 1);
 		pos = pos - floor(sz/2) + [row, col];
+        
+        %detect if occluded, calculate PSR                
+        peakWinSizeRow = round(size(response,1)*0.15);
+        peakWinSizeCol = round(size(response,2)*0.15);
+        numSLpix = (size(response,1)*size(response,2))-peakWinSizeRow*peakWinSizeCol;
+        g_max = max(response(:));
+        meanSideLobe = (sum(sum(response)) - sum(sum(response(row-peakWinSizeRow:row+peakWinSizeRow,col-peakWinSizeCol:col+peakWinSizeCol))))/numSLpix;        
+        responseSL = response;
+        meanSLvector = ones(size(response,1),size(response,2)).*meanSideLobe;
+        responseSL(row-5:row+5,col-5:col+5) = meanSideLobe; %to remove reponse of max window
+        varSideLobe = (sum(sum((meanSideLobe - responseSL).^2))/(numSLpix-1))^(1/2); % not correct, need to take out max window
+        PSR(frame) = (g_max - meanSideLobe) / varSideLobe;
+        
 	end
 	
 	%get subwindow at current estimated target position, to train classifer
@@ -81,7 +105,9 @@ for frame = 1:numel(img_files),
 	if frame == 1,  %first frame, train with a single image
 		alphaf = new_alphaf;
 		z = x;
-	else
+    elseif PSR(frame) < occThresh
+        %estimate new alphaf and z 
+    else
 		%subsequent frames, interpolate model
 		alphaf = (1 - interp_factor) * alphaf + interp_factor * new_alphaf;
 		z = (1 - interp_factor) * z + interp_factor * new_z;
@@ -94,12 +120,17 @@ for frame = 1:numel(img_files),
 	%visualization
 	rect_position = [pos([2,1]) - target_sz([2,1])/2, target_sz([2,1])];
 	if frame == 1,  %first frame, create GUI
-		figure('NumberTitle','off','Name',['Tracker - ' video_path]) 
-		im_handle = imshow(im, 'Border','tight', 'InitialMag',200);
+		figure('NumberTitle','off','Name',['Tracker - ' video_path])        
+   		im_handle = imshow(im, 'Border','tight', 'InitialMag',200);
 		rect_handle = rectangle('Position',rect_position, 'EdgeColor','g');
 	else
-		try  %subsequent frames, update GUI
-			set(im_handle, 'CData', im)
+		try  %subsequent frames, update GUI           
+            if PSR(frame) < occThresh
+                imDisp = insertText(im,position,text_str,'FontSize',18,'BoxColor',box_color,'BoxOpacity',0.4,'TextColor','white');
+            else
+                imDisp = im;
+            end
+			set(im_handle, 'CData', imDisp)
 			set(rect_handle, 'Position', rect_position)
 		catch  %#ok, user has closed the window
 			return
@@ -107,7 +138,7 @@ for frame = 1:numel(img_files),
 	end
 	
 	drawnow
-% 	pause(0.05)  %uncomment to run slower
+ 	pause(0.01)  %uncomment to run slower
 end
 
 if resize_image, positions = positions * 2; end
