@@ -24,7 +24,7 @@ interp_factor = 0.075;			%linear interpolation factor for adaptation
 position = [1 1];
 text_str = 'Occlusion Detected!';
 box_color = {'red'};
-occThresh = 35;
+occThresh = 30;
 
 % Kalman filter
 kalmanFilter = []; isTrackInitialized = false;
@@ -119,9 +119,9 @@ for frame = 1:numel(img_files),
        if isObjectDetected
          MotionModel = 'ConstantAcceleration';
          InitialLocation = detectedLocation;
-         InitialEstimateError = [1 1 1]*1e8; %suggested noise and error from MATLAB
-         MotionNoise = [1, 1, 1];
-         MeasurementNoise = 85;
+         InitialEstimateError = [1 1 1]*1e5; %suggested noise and error from MATLAB
+         MotionNoise = [25, 10, 10];
+         MeasurementNoise = 25;
          kalmanFilter = configureKalmanFilter(MotionModel,InitialLocation,InitialEstimateError,MotionNoise,MeasurementNoise);
          isTrackInitialized = true;
          
