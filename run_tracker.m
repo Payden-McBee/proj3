@@ -24,7 +24,7 @@ interp_factor = 0.075;			%linear interpolation factor for adaptation
 position = [1 1];
 text_str = 'Occlusion Detected!';
 box_color = {'red'};
-occThresh = 35;
+occThresh = 8;
 
 % Kalman filter
 kalmanFilter = []; isTrackInitialized = false;
@@ -42,7 +42,7 @@ if isempty(video_path), return, end  %user cancelled
 %window size, taking padding into account
 sz = floor(target_sz * (1 + padding));
 
-%subwindow 
+%subwindow
 
 %desired output (gaussian shaped), bandwidth proportional to target size
 output_sigma = sqrt(prod(target_sz)) * output_sigma_factor;
@@ -140,7 +140,7 @@ for frame = 1:numel(img_files),
      else
        if isObjectDetected
          predict(kalmanFilter);
-         trackedLocation = correct(kalmanFilter, detectedLocation);
+         trackedLocation = detectedLocation;%correct(kalmanFilter, detectedLocation);
          label = 'Corrected';
          %get subwindow at current estimated target position, to train classifer
          %only train classifier if not occluded
