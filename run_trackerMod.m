@@ -123,7 +123,7 @@ for frame = 1:numel(img_files),
        end
     end
     
-    if ~objOccluded
+    if ~objOccluded %if object is occluded, do not train classifier
         %get subwindow at current estimated target position, to train classifer
         x = get_subwindow(im, pos, sz, cos_window);
 	
