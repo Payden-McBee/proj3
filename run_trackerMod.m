@@ -49,7 +49,6 @@ yf = fft2(y);
 %store pre-computed cosine window
 cos_window = hann(sz(1)) * hann(sz(2))';
 
-
 time = 0;  %to calculate FPS
 positions = zeros(numel(img_files), 2);  %to calculate precision
 
@@ -116,7 +115,7 @@ for frame = 1:numel(img_files),
     else
        if ~objOccluded
          predict(kalmanFilter);
-         pos = round(correct(kalmanFilter, pos))
+         pos = round(correct(kalmanFilter, pos));
          label = 'Corrected';
        else
          pos = predict(kalmanFilter);
