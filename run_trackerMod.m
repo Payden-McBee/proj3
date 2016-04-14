@@ -82,7 +82,7 @@ for frame = 1:numel(img_files),
         numSLpix = (size(response,1)*size(response,2))-peakWinSizeRow*peakWinSizeCol;
         g_max = max(response(:));
         sumResponse = sum(sum(response));
-        sumPeakWin = sum(sum(response(row-peakWinSizeRow:row+peakWinSizeRow,col-peakWinSizeCol:col+peakWinSizeCol)));
+        sumPeakWin = sum(sum(response(row-peakWinSizeRow+1:row+peakWinSizeRow,col-peakWinSizeCol+2:col+peakWinSizeCol)));
         meanSideLobe = (sumResponse - sumPeakWin)/numSLpix;        
         
         meanSLvector = ones(size(response,1),size(response,2)).*meanSideLobe;
@@ -114,16 +114,19 @@ for frame = 1:numel(img_files),
        end
     else
        if ~objOccluded
+         kalmanFilter = configureKalmanFilter('ConstantAcceleration',pos, [1 1 1]*1e5, [25, 10, 10], 25);
          predict(kalmanFilter);
          pos = round(correct(kalmanFilter, pos));
          label = 'Corrected';
        else
+         kalmanFilter = configureKalmanFilter('ConstantAcceleration',pos, [1 1 1]*1e5, [25, 10, 10], 25);
          pos = predict(kalmanFilter);
+         %kalmanFilter = configureKalmanFilter('ConstantAcceleration',pos, [1 1 1]*1e5, [25, 10, 10], 25);
          label = 'Predicted';
        end
     end
     
-    if ~objOccluded %if object is occluded, do not train classifier
+    
         %get subwindow at current estimated target position, to train classifer
         x = get_subwindow(im, pos, sz, cos_window);
 	
@@ -131,7 +134,7 @@ for frame = 1:numel(img_files),
         k = dense_gauss_kernel(sigma, x);
         new_alphaf = yf ./ (fft2(k) + lambda);   %(Eq. 7)
         new_z = x;
-	
+	if ~objOccluded %if object is occluded, do not train classifier
         if frame == 1,  %first frame, train with a single image
             alphaf = new_alphaf;
             z = x;
@@ -167,7 +170,7 @@ for frame = 1:numel(img_files),
 	end
 	
 	drawnow
- 	pause(0.02)  %uncomment to run slower
+ 	%pause(0.02)  %uncomment to run slower
 end
 
 if resize_image, positions = positions * 2; end
