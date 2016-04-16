@@ -5,7 +5,9 @@
 %
 %  João F. Henriques, 2012
 %  http://www.isr.uc.pt/~henriques/
-
+close all
+clear
+clc
 
 %choose the path to the videos (you'll be able to choose one with the GUI)
 base_path = 'C:\Users\Payden McBee\Documents\NEU\NEUclasses\CompVision\proj3\tracker_release\imgs';
@@ -120,21 +122,23 @@ for frame = 1:numel(img_files),
 	   
     if ~HankelMade
         if HankelIndex < 10
-            [henkelElementsRow henkelElementsCol]= makeHenkel(pos,HankelIndex,henkelElementsRow,henkelElementsCol);
+            [henkelElementsRow, henkelElementsCol]= makeHenkel(pos,HankelIndex,henkelElementsRow,henkelElementsCol);
             HankelIndex = HankelIndex + 1;
         else
             HankelMade = true;
-            [Arow Acol brow bcol Crow Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol);
+            [Arow, Acol, brow, bcol, Crow, Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol);
         end
     end
     if HankelMade
        if ~objOccluded 
          [henkelElementsRow, henkelElementsCol] = incrementHankel( henkelElementsRow, henkelElementsCol, pos );
-         [Arow Acol brow bcol Crow Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol);
+         [Arow, Acol, brow, bcol, Crow, Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol);
          label = 'Corrected';
        else
-         vrow = inv(Arow)*brow;%inv(A'*A)*A'*b;
-         vcol = inv(Acol)*bcol;
+         vrow = Arow\brow;
+         %vrow = inv(Arow'*Arow)*Arow'*brow;
+         vcol = Acol\bcol;
+         %vcol = inv(Acol'*Acol)*Acol'*bcol;
          posRow =round(Crow*vrow);
          posCol = round(Ccol*vcol);
          pos = [posRow posCol]

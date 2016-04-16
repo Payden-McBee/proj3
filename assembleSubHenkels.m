@@ -1,4 +1,10 @@
-function [Arow Acol brow bcol Crow Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol)
+function [Arow, Acol, brow, bcol, Crow, Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol)
+Arow = zeros(5,5);
+brow = zeros(5,1);
+Crow = zeros(1,5);
+Acol = zeros(5,5);
+bcol = zeros(5,1);
+Ccol = zeros(1,5);
 for i=1:5
     Arow(i,1:5) =  henkelElementsRow(i:i+4);
     Acol(i,1:5) =  henkelElementsCol(i:i+4);
