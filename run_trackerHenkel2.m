@@ -6,10 +6,11 @@
 %  João F. Henriques, 2012
 %  http://www.isr.uc.pt/~henriques/
 
+
 %choose the path to the videos (you'll be able to choose one with the GUI)
 base_path = 'C:\Users\Payden McBee\Documents\NEU\NEUclasses\CompVision\proj3\tracker_release\imgs';
 %base_path = 'tracker_release/imgs/';
-EO = true;
+
 
 %parameters according to the paper
 padding = 1;					%extra area surrounding the target
@@ -25,8 +26,18 @@ box_color = {'red'};
 occThresh = 10;
 objOccluded = false; 
 
-% Kalman filter
-kalmanFilter = []; isTrackInitialized = false;
+% Henkel Params
+Arow = zeros(5,5);
+brow = zeros(5,1);
+Crow = zeros(1,5);
+Acol = zeros(5,5);
+bcol = zeros(5,1);
+Ccol = zeros(1,5);
+newPos = [0 0]; 
+HankelMade = false; 
+HankelIndex = 1; %increment to 10 
+henkelElementsRow = zeros(1,10);
+henkelElementsCol = zeros(1,10);
 
 %notation: variables ending with f are in the frequency domain.
 
@@ -94,7 +105,7 @@ for frame = 1:numel(img_files),
         if frame == 2
             occThresh = 0.6*PSR(frame)
         end
-        if PSR(frame) < occThresh
+        if PSR(frame) < occThresh & HankelMade == true
             objOccluded = true;
         else
             objOccluded = false; 
@@ -107,26 +118,32 @@ for frame = 1:numel(img_files),
          color = 'g';
     end
 	   
-    if ~isTrackInitialized
-       if ~objOccluded
-         kalmanFilter = configureKalmanFilter('ConstantAcceleration',pos, [1 1 1]*1e5, [50, 20, 20], 50);%[1 1 1]*1e5, [5, 2, 2], 5);
-         isTrackInitialized = true;
-       end
-    else
+    if ~HankelMade
+        if HankelIndex < 10
+            [henkelElementsRow henkelElementsCol]= makeHenkel(pos,HankelIndex,henkelElementsRow,henkelElementsCol);
+            HankelIndex = HankelIndex + 1;
+        else
+            HankelMade = true;
+            [Arow Acol brow bcol Crow Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol);
+        end
+    end
+    if HankelMade
        if ~objOccluded 
-         kalmanFilter = configureKalmanFilter('ConstantAcceleration',pos, [1 1 1]*1e5, [50, 20, 20], 50);
-         predict(kalmanFilter);
-         pos = round(correct(kalmanFilter, pos));
+         [henkelElementsRow, henkelElementsCol] = incrementHankel( henkelElementsRow, henkelElementsCol, pos );
+         [Arow Acol brow bcol Crow Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol);
          label = 'Corrected';
        else
-         kalmanFilter = configureKalmanFilter('ConstantAcceleration',pos,[1 1 1]*1e8, [100, 40, 40], 100);
-         pos = predict(kalmanFilter);
-         %kalmanFilter = configureKalmanFilter('ConstantAcceleration',pos, [1 1 1]*1e5, [50, 20, 20], 50);
+         vrow = inv(Arow)*brow;%inv(A'*A)*A'*b;
+         vcol = inv(Acol)*bcol;
+         posRow =round(Crow*vrow);
+         posCol = round(Ccol*vcol);
+         pos = [posRow posCol]
+         [henkelElementsRow, henkelElementsCol] = incrementHankel( henkelElementsRow, henkelElementsCol, pos );
+         [Arow Acol brow bcol Crow Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol);
          label = 'Predicted';
-       end
+       end  
     end
-    
-    
+        
         %get subwindow at current estimated target position, to train classifer
         x = get_subwindow(im, pos, sz, cos_window);
 	
@@ -163,7 +180,7 @@ for frame = 1:numel(img_files),
                 imDisp = im;
             end
 			set(im_handle, 'CData', imDisp)
-			set(rect_handle, 'Position', rect_position,'EdgeColor',color)    
+			set(rect_handle, 'Position', rect_position,'EdgeColor',color)            
 		catch  %#ok, user has closed the window
 			return
 		end
@@ -179,4 +196,3 @@ disp(['Frames-per-second: ' num2str(numel(img_files) / time)])
 
 %show the precisions plot
 show_precision(positions, ground_truth, video_path)
-
