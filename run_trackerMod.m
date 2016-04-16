@@ -7,7 +7,7 @@
 %  http://www.isr.uc.pt/~henriques/
 
 %choose the path to the videos (you'll be able to choose one with the GUI)
-base_path = 'C:\Users\Payden McBee\Documents\NEU\NEUclasses\CompVision\proj3\tracker_release\imgs';
+base_path = './imgs';
 %base_path = 'tracker_release/imgs/';
 EO = true;
 
@@ -79,20 +79,24 @@ for frame = 1:numel(img_files),
         %detect if occluded, calculate PSR (peal to sidelobe ratio)            
         peakWinSizeRow = round(size(response,1)*0.15);
         peakWinSizeCol = round(size(response,2)*0.15);
+        rowmin = max(row-peakWinSizeRow+1,1);
+        rowmax = min(row+peakWinSizeRow,size(response,1));
+        colmin = max(col-peakWinSizeCol+2,1);
+        colmax = min(col+peakWinSizeCol,size(response,2));
         numSLpix = (size(response,1)*size(response,2))-peakWinSizeRow*peakWinSizeCol;
         g_max = max(response(:));
         sumResponse = sum(sum(response));
-        sumPeakWin = sum(sum(response(row-peakWinSizeRow+1:row+peakWinSizeRow,col-peakWinSizeCol+2:col+peakWinSizeCol)));
+        sumPeakWin = sum(sum(response(rowmin:rowmax,colmin:colmax)));
         meanSideLobe = (sumResponse - sumPeakWin)/numSLpix;        
         
-        meanSLvector = ones(size(response,1),size(response,2)).*meanSideLobe;
+        meanSLvector = ones(size(sumPeakWin,1),size(sumPeakWin,2)).*meanSideLobe;
         responseSL = response;
-        responseSL(row-5:row+5,col-5:col+5) = meanSideLobe; %to remove response of max window
+        responseSL(rowmin:rowmax,colmin:colmax) = meanSideLobe; %to remove response of max window
         varSideLobe = (sum(sum((meanSLvector - responseSL).^2))/(numSLpix-1))^(1/2); % not correct, need to take out max window
         PSR(frame) = (g_max - meanSideLobe) / varSideLobe;
         
-        if frame == 2
-            occThresh = 0.6*PSR(frame)
+        if frame == 10
+            occThresh = 0.35*PSR(frame)
         end
         if PSR(frame) < occThresh
             objOccluded = true;
@@ -179,4 +183,3 @@ disp(['Frames-per-second: ' num2str(numel(img_files) / time)])
 
 %show the precisions plot
 show_precision(positions, ground_truth, video_path)
-
