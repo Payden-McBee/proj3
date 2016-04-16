@@ -109,8 +109,10 @@ for frame = 1:numel(img_files),
         end
         if PSR(frame) < occThresh & HankelMade == true
             objOccluded = true;
+            disp('Object Occluded')
         else
             objOccluded = false; 
+            disp('Object NOT Occluded')
         end 
     end
     
@@ -121,8 +123,8 @@ for frame = 1:numel(img_files),
     end
 	   
     if ~HankelMade
-        if HankelIndex < 10
-            [henkelElementsRow, henkelElementsCol]= makeHenkel(pos,HankelIndex,henkelElementsRow,henkelElementsCol);
+        if HankelIndex < 11
+            [henkelElementsRow, henkelElementsCol]= makeHenkel(pos,HankelIndex,henkelElementsRow,henkelElementsCol)
             HankelIndex = HankelIndex + 1;
         else
             HankelMade = true;
@@ -134,24 +136,34 @@ for frame = 1:numel(img_files),
          [henkelElementsRow, henkelElementsCol] = incrementHankel( henkelElementsRow, henkelElementsCol, pos );
          [Arow, Acol, brow, bcol, Crow, Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol);
          [HankR, HankC] = showHankels(Arow, Acol, brow, bcol, Crow, Ccol, pos);
-         HankC
+         HankC;
          label = 'Corrected';
        else
-         vrow = Arow\brow;
-         %vrow = inv(Arow'*Arow)*Arow'*brow;
-         vcol = Acol\bcol;
-         %vcol = inv(Acol'*Acol)*Acol'*bcol;
-         posRow =round(Crow*vrow);
-         posCol = round(Ccol*vcol);
-         pos = [posRow posCol]
-         [henkelElementsRow, henkelElementsCol] = incrementHankel( henkelElementsRow, henkelElementsCol, pos );
+         if var(Crow)>2 %if there isn't much movement and occlused, assume location stays constant
+         %vrow = Arow\brow
+         vrow = (Arow'*Arow)\Arow'*brow;
+         posRow =Crow*vrow;
+         else
+             posRow = Crow(5);
+         end
+         
+         if var(Ccol)>2
+         %vcol = Acol\bcol;
+         vcol = (Acol'*Acol)\Acol'*bcol;
+         posCol = Ccol*vcol
+         else
+             posCol = Ccol(5);
+         end
+         
+         pos = [round(posRow), round(posCol)];
+         [henkelElementsRow, henkelElementsCol] = incrementHankel( henkelElementsRow, henkelElementsCol, pos )
          [Arow, Acol, brow, bcol, Crow, Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol);
          [HankR, HankC] = showHankels(Arow, Acol, brow, bcol, Crow, Ccol, pos);
          HankC
          label = 'Predicted';
        end  
     end
-        
+    if ~objOccluded %if object is occluded, do not train classifier    
         %get subwindow at current estimated target position, to train classifer
         x = get_subwindow(im, pos, sz, cos_window);
 	
@@ -159,7 +171,7 @@ for frame = 1:numel(img_files),
         k = dense_gauss_kernel(sigma, x);
         new_alphaf = yf ./ (fft2(k) + lambda);   %(Eq. 7)
         new_z = x;
-	if ~objOccluded %if object is occluded, do not train classifier
+	
         if frame == 1,  %first frame, train with a single image
             alphaf = new_alphaf;
             z = x;

@@ -109,12 +109,12 @@ for frame = 1:numel(img_files),
 	   
     if ~isTrackInitialized
        if ~objOccluded
-         kalmanFilter = configureKalmanFilter('ConstantAcceleration',pos, [1 1 1]*1e5, [50, 20, 20], 50);%[1 1 1]*1e5, [5, 2, 2], 5);
+         kalmanFilter = configureKalmanFilter('ConstantAcceleration',pos, [1 1 1]*1e5, [100, 40, 40], 100);%[1 1 1]*1e5, [5, 2, 2], 5);
          isTrackInitialized = true;
        end
     else
        if ~objOccluded 
-         kalmanFilter = configureKalmanFilter('ConstantAcceleration',pos, [1 1 1]*1e5, [50, 20, 20], 50);
+         kalmanFilter = configureKalmanFilter('ConstantAcceleration',pos, [1 1 1]*1e5, [100, 40, 40], 100);
          predict(kalmanFilter);
          pos = round(correct(kalmanFilter, pos));
          label = 'Corrected';
