@@ -133,6 +133,8 @@ for frame = 1:numel(img_files),
        if ~objOccluded 
          [henkelElementsRow, henkelElementsCol] = incrementHankel( henkelElementsRow, henkelElementsCol, pos );
          [Arow, Acol, brow, bcol, Crow, Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol);
+         [HankR, HankC] = showHankels(Arow, Acol, brow, bcol, Crow, Ccol, pos);
+         HankC
          label = 'Corrected';
        else
          vrow = Arow\brow;
@@ -143,7 +145,9 @@ for frame = 1:numel(img_files),
          posCol = round(Ccol*vcol);
          pos = [posRow posCol]
          [henkelElementsRow, henkelElementsCol] = incrementHankel( henkelElementsRow, henkelElementsCol, pos );
-         [Arow Acol brow bcol Crow Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol);
+         [Arow, Acol, brow, bcol, Crow, Ccol] = assembleSubHenkels(henkelElementsRow, henkelElementsCol);
+         [HankR, HankC] = showHankels(Arow, Acol, brow, bcol, Crow, Ccol, pos);
+         HankC
          label = 'Predicted';
        end  
     end
